@@ -8,6 +8,8 @@ import {
 import { createUserValidationSchema } from "../utils/validationSchema.mjs";
 import { resolveIndexByUser } from "../utils/middlewares.mjs";
 import { mockUser } from "../utils/constants.mjs";
+import { User } from "../mongoose/schemas/user.mjs";
+import { hashPassword } from "../utils/helpers.mjs";
 
 const router = Router();
 
@@ -22,7 +24,16 @@ router.get(
     .withMessage("Must be at least 3-10 characters."),
   (req, res) => {
     const result = validationResult(req);
-    console.log(result);
+    console.log(req.session.id);
+    req.sessionStore.get(req.session.id, (err, sessionData) => {
+      if (err) {
+        console.log(err);
+        throw err;
+      }
+      console.log("Inside Session Store Get")
+      console.log(sessionData);
+
+    });
     const {
       query: { value, filter },
     } = req;
@@ -37,25 +48,47 @@ router.get(
 );
 
 // user post request
+// router.post(
+//   "/api/addUsers",
+//   checkSchema(createUserValidationSchema),
+//   (req, res) => {
+//     const result = validationResult(req);
+//     console.log(result);
+
+//     if (!result.isEmpty())
+//       return res.status(400).send({
+//         errors: result.array(),
+//       });
+
+//     const data = matchedData(req);
+
+//     console.log(data);
+//     const { body } = req;
+//     const newUser = { id: mockUser[mockUser.length - 1].id + 1, ...body };
+//     mockUser.push(newUser);
+//     return res.status(201).send(newUser);
+//   }
+// );
+
 router.post(
   "/api/addUsers",
   checkSchema(createUserValidationSchema),
-  (req, res) => {
+  async (req, res) => {
     const result = validationResult(req);
-    console.log(result);
-
-    if (!result.isEmpty())
-      return res.status(400).send({
-        errors: result.array(),
-      });
-
+    console.log(result)
+    if(!result.isEmpty()) return res.send(result.array());
     const data = matchedData(req);
-
-    console.log(data);
-    const { body } = req;
-    const newUser = { id: mockUser[mockUser.length - 1].id + 1, ...body };
-    mockUser.push(newUser);
-    return res.status(201).send(newUser);
+    console.log(data)
+    data.password = hashPassword(data.password);
+    console.log(data)
+    const newUser = new User(data);
+    try {
+      const saveUser = await newUser.save();
+      return res.status(201).send(saveUser);
+    } catch (err) {
+      console.log(err);
+      return res.sendStatus(400);
+    }
   }
 );
 
