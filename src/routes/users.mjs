@@ -2,14 +2,12 @@ import { Router } from "express";
 import {
   validationResult,
   query,
-  checkSchema,
-  matchedData,
+  checkSchema
 } from "express-validator";
 import { createUserValidationSchema } from "../utils/validationSchema.mjs";
 import { resolveIndexByUser } from "../utils/middlewares.mjs";
 import { mockUser } from "../utils/constants.mjs";
-import { User } from "../mongoose/schemas/user.mjs";
-import { hashPassword } from "../utils/helpers.mjs";
+import { createUserHandler, getUserById } from "../handlers/user.mjs";
 
 const router = Router();
 
@@ -30,9 +28,8 @@ router.get(
         console.log(err);
         throw err;
       }
-      console.log("Inside Session Store Get")
+      console.log("Inside Session Store Get");
       console.log(sessionData);
-
     });
     const {
       query: { value, filter },
@@ -73,23 +70,7 @@ router.get(
 router.post(
   "/api/addUsers",
   checkSchema(createUserValidationSchema),
-  async (req, res) => {
-    const result = validationResult(req);
-    console.log(result)
-    if(!result.isEmpty()) return res.send(result.array());
-    const data = matchedData(req);
-    console.log(data)
-    data.password = hashPassword(data.password);
-    console.log(data)
-    const newUser = new User(data);
-    try {
-      const saveUser = await newUser.save();
-      return res.status(201).send(saveUser);
-    } catch (err) {
-      console.log(err);
-      return res.sendStatus(400);
-    }
-  }
+  createUserHandler
 );
 
 // put request
@@ -114,11 +95,6 @@ router.delete("/api/deleteUser/:id", resolveIndexByUser, (req, res) => {
 });
 
 // with request parameters
-router.get("/api/users/:id", resolveIndexByUser, (req, res) => {
-  const { findUserByIndex } = req;
-  const findUser = mockUser[findUserByIndex];
-  if (!findUser) return response.status(404);
-  return res.send(findUser);
-});
+router.get("/api/users/:id", resolveIndexByUser, getUserById);
 
 export default router;
