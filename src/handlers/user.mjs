@@ -1,6 +1,7 @@
 import { matchedData, validationResult } from "express-validator";
 import { mockUser } from "../utils/constants.mjs";
 import { hashPassword } from "../utils/helpers.mjs";
+import { User } from "../mongoose/schemas/user.mjs";
 
 export const getUserById = (req, res) => {
   const { findUserByIndex } = req;
@@ -14,13 +15,11 @@ export const createUserHandler = async (req, res) => {
   if (!result.isEmpty()) return res.status(400).send(result.array());
   const data = matchedData(req);
   data.password = hashPassword(data.password);
-//   const newUser = new User(data);
-
-//   try {
-//     const saveUser = await newUser.save();
-//     return res.status(201).send(saveUser);
-//   } catch (err) {
-//     console.log(err);
-//     return res.sendStatus(400);
-//   }
+  const newUser = new User(data);
+  try {
+    const saveUser = await newUser.save();
+    return res.status(201).send(saveUser);
+  } catch (err) {
+    return res.sendStatus(400);
+  }
 };
